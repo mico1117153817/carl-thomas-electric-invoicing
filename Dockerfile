@@ -6,19 +6,16 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libffi-dev \
     libglib2.0-dev \
-    pango \
-    harfbuzz \
-    fontconfig \
-    librevenge \
-    libxml2-dev \
-    libxslt-dev \
-    pkg-config
-    
+    libpangoftt-1.0-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    fontconfig-config
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
-COPY models.py .
+COPY models.py .  
 COPY database.py .
 COPY schemas.py .
 COPY frontend/index.html .
