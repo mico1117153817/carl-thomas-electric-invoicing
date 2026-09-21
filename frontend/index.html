@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carl Thomas Electric - Invoicing Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; }
+        .estimate-card { transition: all 0.3s ease; }
+        .estimate-card:hover { transform: translateY(-2px); }
+        .status-pending { @bg-yellow-50; }
+        .status-sent { @bg-blue-50; }
+        .status-paid { @bg-green-50; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Carl Thomas Electric company branding
+        const COMPANY = {
+            name: "Carl Thomas Electric",
+            logo: "CT-Electric",
+            color: "#0284c7"
+        };
+        
+        function App() {
+            const [view, setView] = useState('dashboard'); // dashboard, invoices, estimates
+            const [invoices, setInvoices] = useState([]);
+            const [estimates, setEstimates] = useState([]);
+            
+            return (
+                <div className="min-h-screen">
+                    {/* Navigation */}
+                    <nav className="bg-blue-700 text-white shadow-lg">
+                        <div className="max-w-6xl mx-auto px-4 py-3">
+                            <div className="flex items-center justify-between">
+                                <h1 className="text-xl font-bold">{COMPANY.name} Invoicing System</h1>
+                                
+                                <div className="space-x-4">
+                                    <button 
+                                        onClick={() => setView('dashboard')}
+                                        className={`px-3 py-2 rounded ${view === 'dashboard' ? 'bg-blue-800' : ''}`}
+                                    >
+                                        Dashboard
+                                    </button>
+                                    <button 
+                                        onClick={() => setView('invoices')}
+                                        className={`px-3 py-2 rounded ${view === 'invoices' ? 'bg-blue-800' : ''}`}
+                                    >
+                                        Invoices
+                                    </button>
+                                    <button 
+                                        onClick={() => setView('estimates')}
+                                        className={`px-3 py-2 rounded ${view === 'estimates' ? 'bg-blue-800' : ''}`}
+                                    >
+                                        Estimates
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                    
+                    {/* Main Content */}
+                    {view === 'dashboard' && <Dashboard invoices={invoices} estimates={estimates} />}
+                    {view === 'invoices' && <InvoicesView invoices={invoices} setInvoices={setInvoices} />}
+                    {view === 'estimates' && <EstimatesView estimates={estimates} setEstimates={setEstimates} />}
+                </div>
+            );
+        }
+        
+        function Dashboard({ invoices, estimates }) {
+            const totalRevenue = invoices.reduce((sum, inv) => sum + inv.total_amount, 0).toFixed(2);
+            
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <h2 className="text-3xl font-bold mb-6 text-gray-800">Dashboard</h2>
+                    
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h3 className="text-lg font-semibold text-gray-600">Total Invoices</h3>
+                            <p className="text-4xl font-bold text-blue-600">{invoices.length}</p>
+                        </div>
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h3 className="text-lg font-semibold text-gray-600">Estimates Created</h3>
+                            <p className="text-4xl font-bold text-green-600">{estimates.length}</p>
+                        </div>
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h3 className="text-lg font-semibold text-gray-600">Total Revenue</h3>
+                            <p className="text-4xl font-bold text-purple-600">${totalRevenue}</p>
+                        </div>
+                    </div>
+                    
+                    {/* Recent Activity */}
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <h3 className="text-xl font-semibold mb-4">Recent Activity</h3>
+                        {invoices.slice(-5).map(inv => (
+                            <div key={inv.id} className="border-b pb-2">
+                                <p><strong>Invoice #{inv.invoice_number || inv.id}</strong> - ${inv.total_amount} 
+                                    <span className="text-sm ml-2 text-gray-500">({inv.status})</span>
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        
+        // INVOICE CREATION FORM
+        function InvoiceForm({ onSubmit, onCancel }) {
+            const [formData, setFormData] = useState({
+                customer_id: '',
+                description: '',
+                line_items: [{description:'Labor',quantity: 8,unit_price:''}],
+                tax_rate: 0
+            });
+            
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <h2 className="text-3xl font-bold mb-6">Create New Invoice</h2>
+                    
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Customer</label>
+                                <select 
+                                    className="w-full border rounded px-3 py-2"
+                                    value={formData.customer_id}
+                                    onChange={(e) => setFormData({...formData, customer_id: e.target.value})}
+                                >
+                                    <option value="">Select Customer...</option>
+                                    <option value="1">John Smith - Smith Electric</option>
+                                    <option value="2">Mary Johnson - J&K Properties</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Invoice Number</label>
+                                <input 
+                                    type="text"
+                                    className="w-full border rounded px-3 py-2"
+                                    value={formData.invoice_number || ''}
+                                    readOnly
+                                />
+                            </div>
+                        </div>
+                        
+                        {/* Line Items --> */}
+                        {formData.line_items.map((item, index) => (
+                            <div key={index} className="flex gap-4 mb-4 bg-gray-50 p-3 rounded">
+                                <input 
+                                    placeholder="Description"
+                                    className="flex-1 border rounded px-3 py-2"
+                                    value={item.description}
+                                    onChange={(e) => {
+                                        const newItems = [...formData.line_items];
+                                        newItems[index] = {...item, description: e.target.value};
+                                        setFormData({...formData, line_items: newItems});
+                                    }}
+                                />
+                                <input 
+                                    placeholder="Qty"
+                                    type="number"
+                                    step="any"
+                                    className="w-24 border rounded px-3 py-2"
+                                    value={item.quantity}
+                                    onChange={(e) => {
+                                        const newItems = [...formData.line_items];
+                                        newItems[index] = {...item, quantity: parseFloat(e.target.value)};
+                                        setFormData({...formData, line_items: newItems});
+                                    }}
+                                />
+                                <input 
+                                    placeholder="Rate"
+                                    type="number"
+                                    step="any"
+                                    className="w-32 border rounded px-3 py-2"
+                                    value={item.unit_price}
+                                    onChange={(e) => {
+                                        const newItems = [...formData.line_items];
+                                        newItems[index] = {...item, unit_price: parseFloat(e.target.value)};
+                                        setFormData({...formData, line_items: newItems});
+                                    }}
+                                />
+                            </div>
+                        ))}
+                        
+                        <button 
+                            onClick={() => {
+                                const newItem = {description:'Additional Item',quantity:,unit_price:};
+                                setFormData({...formData, line_items: [...formData.line_items, newItem]}});
+                            }}
+                            className="mb-6 bg-gray-200 px-4 py-2 rounded"
+                        >
+                            + Add Line Item
+                        </button>
+                        
+                        <div className="flex gap-4">
+                            <button onClick={onSubmit} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                                Save Invoice
+                            </button>
+                            <button onClick={onCancel} className="bg-gray-300 px-6 py-2 rounded hover:bg-gray-400">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        // ESTIMATE CREATION FORM --> (Similar to InvoiceForm)
+        function EstimateForm({ onSubmit, onCancel }) {
+            const [formData, setFormData] = useState({
+                customer_id: '',
+                description: '',
+                notes: ''
+            });
+            
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <h2 className="text-3xl font-bold mb-6">Create New Estimate</h2>
+                    
+                    <div className="bg-white rounded-lg shadow p-6">
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Customer</label>
+                            <select 
+                                className="w-full border rounded px-3 py-2"
+                                value={formData.customer_id}
+                                onChange={(e) => setFormData({...formData, customer_id: e.target.value})}
+                            >
+                                <option value="">Select Customer...</option>
+                                <option value="1">John Smith - Smith Electric</option>
+                                <option value="2">Mary Johnson - J&K Properties</option>
+                            </select>
+                        </div>
+                        
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Estimate Description</label>
+                            <textarea 
+                                className="w-full border rounded px-3 py-2"
+                                placeholder="Describe the work to be performed..."
+                                value={formData.description}
+                                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                            />
+                        </div>
+                        
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Notes</label>
+                            <textarea 
+                                className="w-full border rounded px-3 py-2"
+                                placeholder="Additional notes..."
+                                value={formData.notes}
+                                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                            />
+                        </div>
+                        
+                        <div className="flex gap-4">
+                            <button onClick={onSubmit} className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+                                Save Estimate
+                            </button>
+                            <button onClick={onCancel} className="bg-gray-300 px-6 py-2 rounded hover:bg-gray-400">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        
+        // INVOICES VIEW --> (List of invoices)
+        function InvoicesView({ invoices }) {
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-3xl font-bold">All Invoices</h2>
+                        <button className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                            Create New Invoice (Coming Soon)
+                        </button>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left font-semibold">Invoice #</th>
+                                    <th className="px-6 py-3 text-left font-semibold">Customer</th>
+                                    <th className="px-6 py-3 text-left font-semibold">Amount</th>
+                                    <th className="px-6 py-3 text-left font-semibold">Status</th>
+                                    <th className="px-6 py-3 text-left font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {invoices.map(invoice => (
+                                    <tr key={invoice.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4">{invoice.invoice_number || invoice.id}</td>
+                                        <td className="px-6 py-4">Customer {invoice.customer_id}</td>
+                                        <td className="px-6 py-4">${invoice.total_amount}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2 py-1 rounded text-xs ${
+                                                invoice.status === 'pending' ? 'bg-yellow-100' : 
+                                                invoice.status === 'sent' ? 'bg-blue-100' : 'bg-green-100'
+                                            }`}>
+                                                {invoice.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 space-x-2">
+                                            <button className="text-blue-600 hover:underline">View</button>
+                                            <button className="text-red-600 hover:underline">Edit</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+        
+        // ESTIMATES VIEW --> (List of estimates)
+        function EstimatesView({ estimates }) {
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-3xl font-bold">All Estimates</h2>
+                        <button onClick={() => setView('estimate-form')}>
+                            Create New Estimate (Coming Soon)
+                        </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {estimates.map(estimate => (
+                            <div key={estimate.id} className="bg-white rounded-lg shadow p-6 estimate-card">
+                                <div className="flex justify-between items-start mb-4">
+                                    <h3 className="text-xl font-bold">Estimate #{estimate.estimate_number || estimate.id}</h3>
+                                    <span className={`px-2 py-1 rounded text-xs ${
+                                        estimate.status === 'draft'?'bg-gray-100':
+                                        estimate.status===active?'bg-blue-100':'bg-green-100'
+                                    `}>
+                                        {estimate.status}
+                                    </span>
+                                </div>
+                                
+                                <p className="text-gray-600">{estimate.description}</p>
+                                
+                                <div className="mt-4 pt-4 border-t">
+                                    <button 
+                                        onClick={convertToInvoice}
+                                        className="bg-orange-500 text-white px-3 py-1 rounded text-sm hover:bg-orange-600"
+                                    >
+                                        Convert to Invoice
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }

@@ -1,0 +1,19 @@
+# Carl Thomas Electric - Invoicing Portal
+FastAPI backend dependencies
+
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+sqlalchemy==2.0.25
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+pydantic==2.5.3
+email-validator==2.1.0
+
+# PDF Generation
+weasyprint==60.1
+cssselect2==0.7.0
+
+# Email
+python-mimeparse==1.6.0
+
+# Frontend build (optional, for React if needed)
