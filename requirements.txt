@@ -10,3 +10,4 @@ email-validator==2.1.0
 weasyprint==60.1
 cssselect2==0.7.0
 python-mimeparse==1.6.0
+sqlmodel==0.0.21
